@@ -1,0 +1,43 @@
+
+#Inventory1
+---
+- name: Install apache and php
+  hosts: webserver
+  become: yes
+  tasks:
+    - name: fail on unsupported versions
+      fail:
+        msg: This playbook supports only centos 7 and ubuntu 20 distributions 
+      when: 
+        - ansible_facts['distribution'] != "Ubuntu"
+        - ansible_facts['distribution'] != "CentOS" 
+        - (ansible_facts['distribution'] == "Ubuntu" and  ansible_facts['distribution_major_version'] != "20") 
+        - (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] != "7")
+    - debug:
+        msg: "Node os is {{ ansible_facts['distribution'] }} package name is {{ package }} and the info location is  {{ info_location }} and the php packages are {{ php_package }}"
+    - name: install apache
+      package:
+        name: "{{ package }}"
+        state: present
+    - name: install php modules
+      package:
+        name: "{{ php_package }}"
+        state: present
+      notify:
+        - Restart Httpd
+    - name: create info.php
+      copy:
+        dest: "{{ info_location }}"
+        content: |
+          <?php 
+          phpinfo(); 
+          ?>
+      notify:
+        - Restart Apache
+  handlers:
+    - name: Restart Apache
+      service:
+        name: "{{ package }}"
+        enabled: yes
+        state: restarted
+      

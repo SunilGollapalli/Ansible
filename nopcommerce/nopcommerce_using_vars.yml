@@ -1,0 +1,78 @@
+---
+- name: Nopcommerce installation
+  hosts: all
+  become: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: fail on unsupported versions
+      fail:
+        msg: This playbook supports only centos and ubuntu distributions 
+      when: 
+        - ansible_facts['distribution'] != "Ubuntu"
+        - ansible_facts['distribution'] != "CentOS" 
+    - name: Install unzip for ubuntu
+      apt:
+        name: "{{ mod_name1 }}"
+        update_cache: yes  
+        state: present 
+      when: ansible_facts['distribution'] == "Ubuntu" 
+    - name: install unzip for centos instances
+      yum:
+        name: "{{ mod_name1 }}"
+        state: present
+      when: ansible_facts['distribution'] == "CentOS"    
+    - name: installing dpkg asp.net 
+      ansible.builtin.apt: 
+        deb: "{{ Deb_url }}"
+    - name: Install apt-transport
+      apt:
+        name: 
+          - apt-transport-https
+        update_cache: yes  
+        state: present
+    - name: Install asp.net
+      apt: 
+        name:
+          - aspnetcore-runtime-6.0
+        state: present  
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+    - name: Copy file
+      copy:
+        src: nopcommerce.conf
+        dest: "{{ nopcom_service_location }}"
+    - name: Create a directory
+      file:
+        path: "{{ item }}"
+        state: directory
+      with_items: "{{ New_dir }}"
+    - name: Download and Unzip nopcommerce zip file
+      unarchive:
+        src: "{{ nopcom_zip_url }}"
+        dest: "{{ nopcom_home }}"
+        remote_src: yes  
+    - name: Changing Ownership and permission
+      file:
+        path: "{{ nopcom_home }}"
+        recurse: yes
+        mode: '755'
+        owner: "{{ username }}"
+        group: "{{ username }}"
+    - name: Copy file
+      copy:
+        src: nopcommerce.service
+        dest: /etc/systemd/system/
+    - name: Create symlink
+      file:
+        src: "{{ nopcom_service_location }}/nopcommerce.conf"
+        dest: "{{nop_dest}}/nopcommerce.conf"
+        state: link
+    - name: Reload Nginx service
+      ansible.builtin.systemd:
+        name: nginx.service
+        daemon_reload: yes
+        enabled: yes
+        state: restarted

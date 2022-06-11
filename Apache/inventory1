@@ -1,0 +1,6 @@
+[Webserver]
+172.31.28.246 package=apache2 php_package='["php","libapache2-mod-php","php-mysql"]'
+172.31.20.239 package=httpd php_package='["php","php-fpm","php-mysql"]'  
+
+[webserver:vars]
+info_location= /var/www/html/info.php

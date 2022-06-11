@@ -1,0 +1,77 @@
+---
+- name: Install apache and php
+  hosts: all
+  become: yes
+  tasks:
+    - name: fail on unsupported versions
+      fail:
+        msg: This playbook supports only centos 7 and ubuntu 20 distributions 
+      when: 
+        - ansible_facts['distribution'] != "Ubuntu"
+        - ansible_facts['distribution'] != "CentOS" 
+        - (ansible_facts['distribution'] == "Ubuntu" and  ansible_facts['distribution_major_version'] != "20") 
+        - (ansible_facts['distribution'] == "CentOS" and ansible_facts['distribution_major_version'] != "7")
+    - name: install apache2
+      apt:
+        name: apache2
+        update_cache: yes
+        state: present
+      when: 
+        - ansible_facts['distribution'] == "Ubuntu"
+        - ansible_facts['distribution_major_version'] == "20"
+    - name: install php modules
+      apt:
+        name:
+          - php 
+          - libapache2-mod-php 
+          - php-mysql 
+        state: present
+      when: 
+        - ansible_facts['distribution'] == "Ubuntu"
+        - ansible_facts['distribution_major_version'] == "20"
+    - name: install httpd
+      yum:
+        name: httpd
+        state: present
+      when: 
+        - ansible_facts['distribution'] == "CentOS"
+        - ansible_facts['distribution_major_version'] == "7"
+    - name: install httpd php modules
+      yum:
+        name:
+          - php 
+          - php-fpm
+          - php-mysql 
+        state: present
+      notify:
+        - Restart Httpd
+      when: 
+        - ansible_facts['distribution'] == "CentOS"
+        - ansible_facts['distribution_major_version'] == "7"
+    - name: create info.php
+      copy:
+        dest: /var/www/html/info.php
+        content: |
+          <?php 
+          phpinfo(); 
+          ?>
+      notify:
+        - Restart Apache2
+        - Restart Httpd
+  handlers:
+    - name: Restart Apache2
+      service:
+        name: apache2
+        enabled: yes
+        state: restarted
+      when: 
+        - ansible_facts['distribution'] == "Ubuntu"
+        - ansible_facts['distribution_major_version'] == "20"
+    - name: Restart Httpd
+      service:
+        name: httpd
+        enabled: yes
+        state: restarted
+      when: 
+        - ansible_facts['distribution'] == "CentOS"
+        - ansible_facts['distribution_major_version'] == "7"

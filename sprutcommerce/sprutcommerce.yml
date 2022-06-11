@@ -1,0 +1,123 @@
+---
+- name: Install Sprut commerce
+  hosts: all
+  become: yes
+  tasks:
+    - name: Download sprutcommerce file
+      git:
+        dest: /home/ansible/spurtcommerce
+        repo: https://github.com/SriSuryaTej/spurtcommerce.git
+        update: yes
+        clone: yes
+    - name: Download Nodejs
+      shell: curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -  
+    - name: Download softwares
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items: 
+        - apache2
+        - nodejs
+        - mysql-server
+        - imagemagick
+        - unzip
+        - build-essential
+        - python3-pymysql
+        - mysql-client
+    - name: Unzip file
+      unarchive:
+        src: /home/ansible/spurtcommerce/Spurtcommerce.zip
+        dest: /home/ansible/spurtcommerce/
+    - name: Creating password for the default user
+      mysql_user:
+        name: root
+        host: localhost
+        password: Password@123
+        login_user: root
+        login_password: Password@123
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+    - name: mysql Db
+      mysql_db:
+        login_user: root
+        login_password: Password@123
+        name: spurtcommerce
+        state: present
+    - name: sql import
+      mysql_db:
+        state: import
+        name: spurtcommerce
+        login_user: root
+        login_password: Password@123
+        target: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/spurtcommerce.sql
+        force: yes    
+    - name: Npm packages install
+      community.general.npm:
+        name: "{{ item }}"
+        state: present
+        global: yes
+      with_items:
+        - forever
+        - apidoc 
+    - name: Enabling Apache2 additional modules  
+      community.general.apache2_module:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - proxy
+        - proxy_http
+        - headers
+    - name: Change the parameter bcrypt
+      replace: 
+        path: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/api/package.json
+        regexp: '3.0.1'
+        replace: '5.0.1' 
+    - name: Angular cli
+      command: sudo npm install -g @angular/cli -y
+    - name: Copy files
+      copy: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+      with_items:
+        - { src: '000-default.conf' , dest: '/etc/apache2/sites-available/' }
+        - { src: '.env', dest: '/home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/api/' }
+        - { src: '.env.production', dest: '/home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/api/' }
+    - name: npm packages
+      npm:
+        name: typeorm-seeding
+        version: 1.0.0-beta.6
+        state: present
+        global: yes
+    - name: Install npm on store folder
+      shell: 
+        chdir: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/store/
+        cmd: "{{ item }}"
+      with_items:
+        - sudo npm install
+        - npm run build
+    - name: copy build files to other location
+      copy: 
+        src: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/store/dist/browser/
+        dest: /var/www/html/
+    - name: Install npm on api folder
+      shell: 
+        chdir: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/api/
+        cmd: "{{ item }}"
+      with_items:
+        - sudo npm install
+        - sudo npm install typeorm-seeding@1.0.0-beta.6
+        - sudo npm run build    
+    - name: Running Api in background
+      shell: 
+        chdir: /home/ansible/spurtcommerce/Spurtcommerce_3.0.2_community_LTS/api/
+        cmd: "{{ item }}"   
+      with_items:
+        - sudo NODE_ENV=production node dist/app.js
+        - sudo NODE_ENV=production forever start dist/app.js
+
+
+   
+   
+   
+  
+

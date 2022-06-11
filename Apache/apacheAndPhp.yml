@@ -1,0 +1,41 @@
+---
+- name: Apache and Php
+  hosts: all
+  become: yes
+  tasks:
+    - name: Apache
+      apt:
+        name: apache2
+        update_cache: yes
+        state: present
+    - name: Installing php
+      apt: 
+        name:
+          - php 
+          - libapache2-mod-php
+          - php-mysql
+        state: present
+    - name: Create a file
+      copy: 
+        dest: /var/www/html/info.php
+        content: |
+          <?php 
+          phpinfo();
+          ?>
+      notify:
+        Restart apache  
+  handlers:        
+    - name: Restart apache
+      service: 
+        name: apache2
+        state: restarted
+        enabled: yes        
+
+
+# Adhoc command to install git 
+ansible -b -i inventory -m 'apt' -a 'name=git update_cache=yes state=present' all
+#to remove git
+ansible -b -i inventory -m 'apt' -a 'name=git update_cache=yes state=absent' all
+
+#to reboot servers
+ansible -b -i inventory -m reboot all

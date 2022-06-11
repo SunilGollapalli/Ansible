@@ -1,0 +1,22 @@
+#We can specify variables in foll ways
+
+Eg.
+1. Under yml file
+vars:
+  java_package: openjdk-11-jdk
+  tomcat_username: tomcat
+  tomcat_home: /opt/tomcat
+  tomcat_shell: /bin/false
+  tomcat_version: '9.0.54'
+
+2. specifying file name under yml .create a file under vars folder if the ansible playbook is complex or else create under same location where yml file is present
+vars_files:
+    - defaults.yml
+
+3. Creating group and host level variables
+we need to create group folder for groupl level variables and host folder for host level variable
+#both folder should be where host file is present
+#In host_var folder create file with the name of the host
+#In group_var folder create file with the name of the group which is specified under group
+for folder level vars check below link
+https://github.com/asquarezone/AnsibleZone/tree/master/Oct21/tomcat9
